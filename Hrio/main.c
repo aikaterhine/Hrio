@@ -2,19 +2,23 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include<string.h>
 #include<allegro5/allegro_primitives.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdbool.h>
+#include <time.h>
+#define MAX_TAM 50
+#define MAX_PESSOAS 6
 
 const float FPS = 100;
-const int SCREEN_W = 1000;
-const int SCREEN_H = 500;
+const int SCREEN_W = 100;
+const int SCREEN_H = 200;
 
 ALLEGRO_DISPLAY *display = NULL;
 ALLEGRO_EVENT_QUEUE *event_queue = NULL;
 ALLEGRO_TIMER *timer = NULL;
 ALLEGRO_COLOR BKG_COLOR;
-ALLEGRO_FONT *size_32;
 
 typedef struct Nave {
 	float x;
@@ -28,8 +32,14 @@ typedef struct Nave {
 int playing=1;
 int qntdnaves=0;
 struct Nave *navesec = NULL;
-int i, j, xini, yini;
-volatile int tempo;
+int i, j, xini, yini, x, y, temp;
+volatile long long int tempo =0;
+bool concluido = false;
+bool sair = false;
+char nome[MAX_PESSOAS][17];
+char *nomeaux;
+char buf[MAX_TAM];
+int Rpont[MAX_PESSOAS];
 
 float calculaRaio(float area1, float area2){
     float areat = area1+area2;
@@ -158,7 +168,10 @@ int iniciar(){
 		return -1;
 	}
 
-    size_32 = al_load_font("arial.ttf", 32, 1);
+    if(!al_install_keyboard()){
+		fprintf(stderr, "Falha inicializacao do teclado!\n");
+		return -1;
+	}
 
    	/*registra na fila de eventos que eu quero identificar quando a tela foi alterada */
     al_register_event_source(event_queue, al_get_display_event_source(display));
@@ -166,6 +179,8 @@ int iniciar(){
     al_register_event_source(event_queue, al_get_timer_event_source(timer));
 	/* Registra mouse na fila de eventos:*/
 	al_register_event_source(event_queue, al_get_mouse_event_source());
+	/* Registra teclado na fila de eventos:*/
+	al_register_event_source(event_queue, al_get_keyboard_event_source());
 
 	BKG_COLOR = al_map_rgb(255,255,255);
     /*avisa o allegro que agora eu quero modificar as propriedades da tela*/
@@ -192,8 +207,8 @@ void criaInimigo(Nave *b, int r){
 	(*b).x = rand()%100;
 	(*b).cor = al_map_rgb(218,112,214);
 	(*b).raio = r;
-	(*b).dx = 0;
-	(*b).dy = 0;
+	(*b).dx = 1;
+	(*b).dy = -1;
 }
 
 float dist(float x1, float x2, float y1, float y2) {
@@ -239,6 +254,42 @@ void desenhaDisparo(Nave navesec){
     al_draw_filled_circle(navesec.x, navesec.y, navesec.raio, navesec.cor);
 }
 
+/*void manipular_entrada(ALLEGRO_EVENT evento){
+
+    printf("ENTROU AUQI");
+    if (evento.type == ALLEGRO_EVENT_KEY_CHAR)
+    {
+        if (strlen(nome) <= 16)
+        {
+            char temp[] = {evento.keyboard.unichar, '\0'};
+            if (evento.keyboard.unichar == ' ')
+            {
+                strcat(nome, temp);
+            }
+            else if (evento.keyboard.unichar >= '0' &&
+                     evento.keyboard.unichar <= '9')
+            {
+                strcat(nome, temp);
+            }
+            else if (evento.keyboard.unichar >= 'A' &&
+                     evento.keyboard.unichar <= 'Z')
+            {
+                strcat(nome, temp);
+            }
+            else if (evento.keyboard.unichar >= 'a' &&
+                     evento.keyboard.unichar <= 'z')
+            {
+                strcat(nome, temp);
+            }
+        }
+
+        if (evento.keyboard.keycode == ALLEGRO_KEY_BACKSPACE && strlen(nome) != 0)
+        {
+            nome[strlen(nome) - 1][] = '\0';
+        }
+    }
+}*/
+
 void jogo(){
 
     Nave nave;
@@ -249,12 +300,57 @@ void jogo(){
 
     Nave *navesec = NULL;
 
-    int mod1 = rand()%400;
-    int mod2 = rand()%400;
+    int pont;
+
+    FILE *arq;
+    arq = fopen("ranking.txt", "r");
+
+    if(arq!=NULL){
+        while(feof(arq)==NULL){
+            fgets(buf, MAX_TAM, arq);
+            nomeaux = strtok(buf, "|");
+            strcpy(nome[x],nomeaux);
+            Rpont[x] = atoi(strtok(NULL, "|"));
+            x++;
+        }
+
+        for(i=0; i<MAX_PESSOAS; i++){
+            for(j=0; j<MAX_PESSOAS; j++){
+                if(Rpont[i]>Rpont[j]){
+                    temp = Rpont[i];
+                    Rpont[i] = Rpont[j];
+                    Rpont[j] = temp;
+                    strcpy(nomeaux, nome[i]);
+                    strcpy(nome[i], nome[j]);
+                    strcpy(nome[j], nomeaux);
+                }
+            }
+        }
+    }
+    else{
+        printf("Arquivo inexistente.");
+    }
+
+    fclose(arq);
+
+    arq = fopen("ranking.txt", "w");
+    if(arq != NULL){
+        for(x=0; x<5; x++){
+            fprintf(arq, "%s|%d\n", nome[x], Rpont[x]);
+        }
+    }
+    else{
+        printf("Arquivo inexistente.");
+    }
+
+    for(x=0; x<5; x++){
+        printf("%s %d\n", nome[x], Rpont[x]);
+    }
+
+    srand((unsigned) time(NULL));
 
     while(playing !=0){
         tempo++;
-        srand((unsigned) time(NULL));
 
         ALLEGRO_EVENT ev;
         /*inicia o temporizador*/
@@ -279,10 +375,11 @@ void jogo(){
            nave.x += nave.dx;
            nave.y += nave.dy;
 
+           desenhaNave(nave);
+
            naveinimiga.x += naveinimiga.dx;
            naveinimiga.y += naveinimiga.dy;
 
-           desenhaNave(nave);
            desenhaNave(naveinimiga);
 
         if(navesec!=NULL){
@@ -309,7 +406,7 @@ void jogo(){
             }
 
             if(detectarColisaoInimigo(&nave, &naveinimiga)==1){
-                printf("perdeu");
+                playing = 0;
             }
             else{
                 detectarColisaoPrincipal(&nave, &navesec);
@@ -331,12 +428,43 @@ void jogo(){
                 }
             }
         }
-
-        naveinimiga.dx = (mod1 - naveinimiga.x)/dist(mod1, naveinimiga.x, mod2, naveinimiga.y);
-        naveinimiga.dy = (mod2 - naveinimiga.y)/dist(mod1, naveinimiga.x, mod2, naveinimiga.y);
-
         al_clear_to_color(BKG_COLOR);
     }
+
+    al_clear_to_color(al_map_rgb(0,0,0));
+    tempo = al_get_timer_count(timer)/FPS;
+
+    for(x=0, y=0; x<MAX_PESSOAS; x++){
+        if(Rpont[x]>tempo){
+            y++;
+        }
+    }
+    printf("%d", y);
+    if(y<=5){
+
+        ALLEGRO_EVENT ev1;
+        al_wait_for_event(event_queue, &ev1);
+
+        if(ev1.type == ALLEGRO_EVENT_DISPLAY_CLOSE){
+               al_destroy_timer(timer);
+               al_destroy_display(display);
+               al_destroy_event_queue(event_queue);
+        }
+
+
+      /*  char string[17];
+        strcpy(string, "");
+        strcpy(string, getText(10,10,display,0xFFFFFF));*/
+    }
+    else{
+        al_destroy_timer(timer);
+        al_destroy_display(display);
+        al_destroy_event_queue(event_queue);
+    }
+
+
+    al_flip_display();
+    al_rest(3);
 }
 
 int main() {
@@ -345,7 +473,7 @@ int main() {
         jogo();
     }
     else{
-        puts("Fim de Jogo");
+        puts("Erro de Inicializacao.");
     }
         return 0;
 }

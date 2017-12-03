@@ -1,0 +1,5 @@
+AAAAA|2400
+BBBBB|2100
+Carol|2014
+Catau|2013
+Tulaa|2010
