@@ -1,24 +1,15 @@
-#include <stdio.h>
-#include <allegro5/allegro.h>
+#include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
-#include<string.h>
-#include<allegro5/allegro_primitives.h>
-#include <stdlib.h>
-#include <math.h>
+#include <allegro5/allegro.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
 #include <time.h>
 #define MAX_TAM 50
 #define MAX_PESSOAS 6
-
-const float FPS = 100;
-const int SCREEN_W = 100;
-const int SCREEN_H = 200;
-
-ALLEGRO_DISPLAY *display = NULL;
-ALLEGRO_EVENT_QUEUE *event_queue = NULL;
-ALLEGRO_TIMER *timer = NULL;
-ALLEGRO_COLOR BKG_COLOR;
 
 typedef struct Nave {
 	float x;
@@ -29,17 +20,21 @@ typedef struct Nave {
 	ALLEGRO_COLOR cor;
 } Nave;
 
-int playing=1;
-int qntdnaves=0;
+const float FPS = 100;
+const int SCREEN_W = 100;
+const int SCREEN_H = 200;
+
+ALLEGRO_DISPLAY *display = NULL;
+ALLEGRO_EVENT_QUEUE *event_queue = NULL;
+ALLEGRO_TIMER *timer = NULL;
+ALLEGRO_FONT *fonte = NULL;
+ALLEGRO_COLOR BKG_COLOR;
+
 struct Nave *navesec = NULL;
-int i, j, xini, yini, x, y, temp;
+int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS];
 volatile long long int tempo =0;
-bool concluido = false;
-bool sair = false;
-char nome[MAX_PESSOAS][17];
-char *nomeaux;
-char buf[MAX_TAM];
-int Rpont[MAX_PESSOAS];
+bool concluido = false, sair = false;
+char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
 
 float calculaRaio(float area1, float area2){
     float areat = area1+area2;
@@ -137,12 +132,15 @@ int iniciar(){
       return -1;
    }
 
+    al_init_font_addon();
+    al_init_ttf_addon();
+
     if(!al_init_primitives_addon()){
 		fprintf(stderr, "Falha inicializacao de primitivos!\n");
         return -1;
     }
 
-   display = al_create_display(SCREEN_W, SCREEN_H);
+    display = al_create_display(SCREEN_W, SCREEN_H);
 
    if(!display) {
       fprintf(stderr, "Falha criacao do display!\n");
@@ -172,6 +170,13 @@ int iniciar(){
 		fprintf(stderr, "Falha inicializacao do teclado!\n");
 		return -1;
 	}
+
+    fonte = al_load_ttf_font("comic.ttf", 42, 0);
+    if (!fonte)
+    {
+        fprintf(stderr, "Falha ao carregar \"comic.ttf\".\n");
+        return false;
+    }
 
    	/*registra na fila de eventos que eu quero identificar quando a tela foi alterada */
     al_register_event_source(event_queue, al_get_display_event_source(display));
@@ -254,41 +259,54 @@ void desenhaDisparo(Nave navesec){
     al_draw_filled_circle(navesec.x, navesec.y, navesec.raio, navesec.cor);
 }
 
-/*void manipular_entrada(ALLEGRO_EVENT evento){
+void finalizar(){
+    al_destroy_timer(timer);
+    al_destroy_display(display);
+    al_destroy_event_queue(event_queue);
+}
 
-    printf("ENTROU AUQI");
+void manipular_entrada(ALLEGRO_EVENT evento){
     if (evento.type == ALLEGRO_EVENT_KEY_CHAR)
     {
-        if (strlen(nome) <= 16)
+        if (strlen(str) <= 16)
         {
             char temp[] = {evento.keyboard.unichar, '\0'};
             if (evento.keyboard.unichar == ' ')
             {
-                strcat(nome, temp);
+                strcat(str, temp);
             }
             else if (evento.keyboard.unichar >= '0' &&
                      evento.keyboard.unichar <= '9')
             {
-                strcat(nome, temp);
+                strcat(str, temp);
             }
             else if (evento.keyboard.unichar >= 'A' &&
                      evento.keyboard.unichar <= 'Z')
             {
-                strcat(nome, temp);
+                strcat(str, temp);
             }
             else if (evento.keyboard.unichar >= 'a' &&
                      evento.keyboard.unichar <= 'z')
             {
-                strcat(nome, temp);
+                strcat(str, temp);
             }
         }
 
-        if (evento.keyboard.keycode == ALLEGRO_KEY_BACKSPACE && strlen(nome) != 0)
+        if (evento.keyboard.keycode == ALLEGRO_KEY_BACKSPACE && strlen(str) != 0)
         {
-            nome[strlen(nome) - 1][] = '\0';
+            str[strlen(str) - 1] = '\0';
         }
     }
-}*/
+}
+
+void exibir_texto_centralizado(){
+    if (strlen(str) > 0)
+    {
+        al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
+                     (SCREEN_H - al_get_font_ascent(fonte)) / 2,
+                     ALLEGRO_ALIGN_CENTRE, str);
+    }
+}
 
 void jogo(){
 
@@ -301,6 +319,8 @@ void jogo(){
     Nave *navesec = NULL;
 
     int pont;
+
+    strcpy(str, "");
 
     FILE *arq;
     arq = fopen("ranking.txt", "r");
@@ -439,32 +459,53 @@ void jogo(){
             y++;
         }
     }
+
     printf("%d", y);
+
     if(y<=5){
+        while (!sair){
+            while (!al_is_event_queue_empty(event_queue))
+            {
+                ALLEGRO_EVENT evento;
+                al_wait_for_event(event_queue, &evento);
 
-        ALLEGRO_EVENT ev1;
-        al_wait_for_event(event_queue, &ev1);
+                if (!concluido)
+                {
+                    manipular_entrada(evento);
 
-        if(ev1.type == ALLEGRO_EVENT_DISPLAY_CLOSE){
-               al_destroy_timer(timer);
-               al_destroy_display(display);
-               al_destroy_event_queue(event_queue);
+                    if (evento.type == ALLEGRO_EVENT_KEY_DOWN && evento.keyboard.keycode == ALLEGRO_KEY_ENTER)
+                    {
+                        concluido = true;
+                    }
+                }
+
+                if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+                {
+                    sair = true;
+                }
+            }
+
+            al_draw_bitmap(display, 0, 0, 0);
+
+            if (!concluido)
+            {
+                al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
+                            (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
+                            ALLEGRO_ALIGN_CENTRE, "Melhor Pontuação! Nome:");
+            }
+            else
+            {
+                al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
+                            (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
+                            ALLEGRO_ALIGN_CENTRE, "1º Lugar");
+            }
+
+            exibir_texto_centralizado();
+
+            al_flip_display();
         }
-
-
-      /*  char string[17];
-        strcpy(string, "");
-        strcpy(string, getText(10,10,display,0xFFFFFF));*/
     }
-    else{
-        al_destroy_timer(timer);
-        al_destroy_display(display);
-        al_destroy_event_queue(event_queue);
-    }
-
-
-    al_flip_display();
-    al_rest(3);
+    finalizar();
 }
 
 int main() {

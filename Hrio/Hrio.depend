@@ -1,13 +1,13 @@
 # depslib dependency file v1.0
-1512279818 source:d:\aeds i\hrio\main.c
-	<stdio.h>
-	<allegro5/allegro.h>
+1512283546 source:d:\aeds i\hrio\main.c
+	<allegro5/allegro_primitives.h>
 	<allegro5/allegro_font.h>
 	<allegro5/allegro_ttf.h>
-	<string.h>
-	<allegro5/allegro_primitives.h>
-	<stdlib.h>
-	<math.h>
+	<allegro5/allegro.h>
 	<stdbool.h>
+	<stdlib.h>
+	<string.h>
+	<stdio.h>
+	<math.h>
 	<time.h>
 
