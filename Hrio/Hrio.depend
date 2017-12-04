@@ -11,3 +11,15 @@
 	<math.h>
 	<time.h>
 
+1512358370 source:d:\hrio-master\hrio\main.c
+	<allegro5/allegro_primitives.h>
+	<allegro5/allegro_font.h>
+	<allegro5/allegro_ttf.h>
+	<allegro5/allegro.h>
+	<stdbool.h>
+	<stdlib.h>
+	<string.h>
+	<stdio.h>
+	<math.h>
+	<time.h>
+

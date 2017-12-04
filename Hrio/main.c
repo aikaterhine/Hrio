@@ -21,8 +21,8 @@ typedef struct Nave {
 } Nave;
 
 const float FPS = 100;
-const int SCREEN_W = 100;
-const int SCREEN_H = 200;
+const int SCREEN_W = 200;
+const int SCREEN_H = 400;
 
 ALLEGRO_DISPLAY *display = NULL;
 ALLEGRO_EVENT_QUEUE *event_queue = NULL;
@@ -31,10 +31,10 @@ ALLEGRO_FONT *fonte = NULL;
 ALLEGRO_COLOR BKG_COLOR;
 
 struct Nave *navesec = NULL;
-int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS];
+int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0;
 volatile long long int tempo =0;
 bool concluido = false, sair = false;
-char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
+char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17], nomeauxiliar[17];
 
 float calculaRaio(float area1, float area2){
     float areat = area1+area2;
@@ -331,11 +331,12 @@ void jogo(){
             nomeaux = strtok(buf, "|");
             strcpy(nome[x],nomeaux);
             Rpont[x] = atoi(strtok(NULL, "|"));
+            qntdjogadores++;
             x++;
         }
 
-        for(i=0; i<MAX_PESSOAS; i++){
-            for(j=0; j<MAX_PESSOAS; j++){
+        for(i=0; i<qntdjogadores; i++){
+            for(j=0; j<qntdjogadores; j++){
                 if(Rpont[i]>Rpont[j]){
                     temp = Rpont[i];
                     Rpont[i] = Rpont[j];
@@ -352,20 +353,6 @@ void jogo(){
     }
 
     fclose(arq);
-
-    arq = fopen("ranking.txt", "w");
-    if(arq != NULL){
-        for(x=0; x<5; x++){
-            fprintf(arq, "%s|%d\n", nome[x], Rpont[x]);
-        }
-    }
-    else{
-        printf("Arquivo inexistente.");
-    }
-
-    for(x=0; x<5; x++){
-        printf("%s %d\n", nome[x], Rpont[x]);
-    }
 
     srand((unsigned) time(NULL));
 
@@ -454,13 +441,11 @@ void jogo(){
     al_clear_to_color(al_map_rgb(0,0,0));
     tempo = al_get_timer_count(timer)/FPS;
 
-    for(x=0, y=0; x<MAX_PESSOAS; x++){
+    for(x=0, y=0; x<qntdjogadores; x++){
         if(Rpont[x]>tempo){
             y++;
         }
     }
-
-    printf("%d", y);
 
     if(y<=5){
         while (!sair){
@@ -485,25 +470,58 @@ void jogo(){
                 }
             }
 
-            al_draw_bitmap(display, 0, 0, 0);
+            al_clear_to_color(al_map_rgb(0,0,0));
 
             if (!concluido)
             {
                 al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
                             (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
-                            ALLEGRO_ALIGN_CENTRE, "Melhor Pontuação! Nome:");
+                            ALLEGRO_ALIGN_CENTRE, "Agora voce faz parte do ranking! Nome:");
             }
-            else
-            {
-                al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
-                            (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
-                            ALLEGRO_ALIGN_CENTRE, "1º Lugar");
-            }
-
+            if(strlen(str)>16)
             exibir_texto_centralizado();
 
             al_flip_display();
         }
+
+        qntdjogadores++;
+        Rpont[qntdjogadores] = tempo;
+        printf("%d", Rpont[qntdjogadores]);
+        strcpy(nome[qntdjogadores], str);
+
+        for(i=0; i<qntdjogadores; i++){
+                printf("\n\t%d", Rpont[i]);
+            for(j=0; j<qntdjogadores; j++){
+                if(Rpont[i]>Rpont[j]){
+                    temp = Rpont[i];
+                    Rpont[i] = Rpont[j];
+                    Rpont[j] = temp;
+                    printf("AQUIIII");
+                    strcpy(nomeauxiliar, nome[i]);
+                    strcpy(nome[i], nome[j]);
+                    strcpy(nome[j], nomeauxiliar);
+                    printf("[%s]", nome[i]);
+                }
+            }
+        }
+                            printf("[%s]", nome[i]);
+
+
+         arq = fopen("ranking.txt", "w");
+
+        if(arq != NULL){
+            for(x=0; x<qntdjogadores; x++){
+                fprintf(arq, "%s|%d\n", nome[x], Rpont[x]);
+            }
+        }
+        else{
+            printf("Arquivo inexistente.");
+        }
+
+        fclose(arq);
+    }
+    else{
+        al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2, (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2, ALLEGRO_ALIGN_CENTRE, "Perdeu :(");
     }
     finalizar();
 }
