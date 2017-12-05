@@ -33,9 +33,13 @@ ALLEGRO_COLOR BKG_COLOR, BKG_COLOR_MSSG;
 
 struct Nave *navesec = NULL;
 int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0, min=0;
-volatile long long int tempo=0;
+volatile int tempo=0;
 bool concluido = false, sair = false;
 char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
+
+int corAleatoria(){
+    return rand()%255;
+}
 
 float calculaRaio(float area1, float area2){
     float areat = area1+area2;
@@ -220,10 +224,6 @@ float dist(float x1, float x2, float y1, float y2) {
 	return sqrt(pow(x1-x2,2) + pow(y1-y2,2));
 }
 
-int corAleatoria(){
-    return rand()%255;
-}
-
 void disparar(Nave *nave, Nave **navesec, int evx, int evy){
     int areat, raio;
     Nave *redim_naves;
@@ -327,7 +327,7 @@ void jogo(){
     arq = fopen("ranking.txt", "r");
 
     if(arq!=NULL){
-        while(feof(arq)==NULL){
+        while(!feof(arq)){
             fgets(buf, MAX_TAM, arq);
             nomeaux = strtok(buf, "|");
             strcpy(nome[x],nomeaux);
@@ -411,7 +411,7 @@ void jogo(){
             }
             tempo = al_get_timer_count(timer)/FPS;
             if(min%2==1 && qntdnaves<=52){
-                dispararAleatorio(&navesec);
+                /*dispararAleatorio(&navesec);*/
                 for(i=0; i<qntdnaves; i++){
                     desenhaDisparo(navesec[i]);
                 }
