@@ -32,8 +32,8 @@ ALLEGRO_FONT *fonte = NULL;
 ALLEGRO_COLOR BKG_COLOR, BKG_COLOR_MSSG;
 
 struct Nave *navesec = NULL;
-int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0;
-volatile long long int tempo =0;
+int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0, min=0;
+volatile long long int tempo=0;
 bool concluido = false, sair = false;
 char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
 
@@ -358,7 +358,6 @@ void jogo(){
     srand((unsigned) time(NULL));
 
     while(playing !=0){
-        tempo++;
 
         ALLEGRO_EVENT ev;
         /*inicia o temporizador*/
@@ -371,6 +370,10 @@ void jogo(){
             sair = true;
         }
         else if(ev.type == ALLEGRO_EVENT_TIMER) {
+            if (tempo==60){
+                min++;
+                tempo=0;
+            }
 
           if(nave.x > SCREEN_W || nave.x < 0 || naveinimiga.x > SCREEN_W || naveinimiga.x < 0){
               nave.dx = -nave.dx;
@@ -407,8 +410,8 @@ void jogo(){
                 desenhaDisparo(navesec[i]);
             }
             tempo = al_get_timer_count(timer)/FPS;
-            if(tempo%997==0 && qntdnaves<=52){
-                /*dispararAleatorio(&navesec);*/
+            if(min%2==1 && qntdnaves<=52){
+                dispararAleatorio(&navesec);
                 for(i=0; i<qntdnaves; i++){
                     desenhaDisparo(navesec[i]);
                 }
@@ -427,11 +430,13 @@ void jogo(){
 
         al_flip_display();
         al_clear_to_color(BKG_COLOR);
-        al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 25, SCREEN_H / 15, ALLEGRO_ALIGN_INTEGER, "%d", tempo);
+        al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 25, SCREEN_H / 15, ALLEGRO_ALIGN_INTEGER, "%d:%d", min, tempo);
 
     }
 
         else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+                            tempo++;
+
             nave.dx = (ev.mouse.x - nave.x)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
             nave.dy = (ev.mouse.y - nave.y)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
 
@@ -499,9 +504,7 @@ void jogo(){
                         Rpont[i] = Rpont[j];
                         Rpont[j] = temp;
                         strcpy(nomeaux, nome[i]);
-                        printf("[%s] ", nomeaux);
                         strcpy(nome[i], nome[j]);
-                        printf("[%s] ", nome[i]);
                         strcpy(nome[j], nomeaux);
                         printf("[%s]\n", nome[j]);
                     }
@@ -519,9 +522,7 @@ void jogo(){
             else{
                 printf("Arquivo inexistente.");
             }
-
             fclose(arq);
-
         }
     }
     else{
