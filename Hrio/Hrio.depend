@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1512283546 source:d:\aeds i\hrio\main.c
+1512459434 source:c:\users\usuário\desktop\hrio\main.c
 	<allegro5/allegro_primitives.h>
 	<allegro5/allegro_font.h>
 	<allegro5/allegro_ttf.h>
@@ -11,11 +11,12 @@
 	<math.h>
 	<time.h>
 
-1512358370 source:d:\hrio-master\hrio\main.c
+1512517938 source:d:\hrio\main.c
 	<allegro5/allegro_primitives.h>
 	<allegro5/allegro_font.h>
 	<allegro5/allegro_ttf.h>
 	<allegro5/allegro.h>
+	<allegro5/allegro_native_dialog.h>
 	<stdbool.h>
 	<stdlib.h>
 	<string.h>

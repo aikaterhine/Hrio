@@ -2,6 +2,7 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro.h>
+#include <allegro5/allegro_native_dialog.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,20 +22,20 @@ typedef struct Nave {
 } Nave;
 
 const float FPS = 100;
-const int SCREEN_W = 200;
-const int SCREEN_H = 400;
+const int SCREEN_W = 800;
+const int SCREEN_H = 500;
 
 ALLEGRO_DISPLAY *display = NULL;
 ALLEGRO_EVENT_QUEUE *event_queue = NULL;
 ALLEGRO_TIMER *timer = NULL;
 ALLEGRO_FONT *fonte = NULL;
-ALLEGRO_COLOR BKG_COLOR;
+ALLEGRO_COLOR BKG_COLOR, BKG_COLOR_MSSG;
 
 struct Nave *navesec = NULL;
 int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0;
 volatile long long int tempo =0;
 bool concluido = false, sair = false;
-char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17], nomeauxiliar[17];
+char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
 
 float calculaRaio(float area1, float area2){
     float areat = area1+area2;
@@ -43,29 +44,27 @@ float calculaRaio(float area1, float area2){
 }
 
 void dispararAleatorio(Nave **navesec){
+    int areat, raio;
     Nave *redim_naves;
-    int rand1, rand2;
 
-     redim_naves = (Nave *)realloc(*navesec, ((qntdnaves + 1) * sizeof(Nave)));
-     *navesec = redim_naves;
-
-     if(*navesec == NULL){
-        printf("\nERRO AO ALOCAR MEMORIA.");
+	if(*navesec == NULL){
+        *navesec = (Nave *)malloc(sizeof(Nave));
+	}
+	else{
+        redim_naves = (Nave *)realloc(*navesec, ((qntdnaves + 1) * sizeof(Nave)));
+        *navesec = redim_naves;
+        qntdnaves++;
+	}
+    if(*navesec == NULL){
+        printf("\nERRO AO ALOCAR MEMORIA2.");
     }
 	else{
-        qntdnaves++;
-
-		rand1 = rand()%100;
-		rand2 = rand()%100;
-
-
         (*navesec)[qntdnaves].raio = 4;
         (*navesec)[qntdnaves].dx = 2;
         (*navesec)[qntdnaves].dy = 2;
-        (*navesec)[qntdnaves].cor = al_map_rgb(140,0,26);
-
-        (*navesec)[qntdnaves].x = rand1;
-		(*navesec)[qntdnaves].y = rand2;
+        (*navesec)[qntdnaves].cor = al_map_rgb(corAleatoria(), corAleatoria(), corAleatoria());
+        (*navesec)[qntdnaves].x = 10;
+		(*navesec)[qntdnaves].y = 10;
     }
 }
 
@@ -188,6 +187,7 @@ int iniciar(){
 	al_register_event_source(event_queue, al_get_keyboard_event_source());
 
 	BKG_COLOR = al_map_rgb(255,255,255);
+	BKG_COLOR_MSSG = al_map_rgb(10,10,10);
     /*avisa o allegro que agora eu quero modificar as propriedades da tela*/
     al_set_target_bitmap(al_get_backbuffer(display));
 	/*colore a tela de preto (rgb(0,0,0))*/
@@ -284,6 +284,7 @@ void manipular_entrada(ALLEGRO_EVENT evento){
                      evento.keyboard.unichar <= 'Z')
             {
                 strcat(str, temp);
+
             }
             else if (evento.keyboard.unichar >= 'a' &&
                      evento.keyboard.unichar <= 'z')
@@ -366,7 +367,8 @@ void jogo(){
         al_wait_for_event(event_queue, &ev);
 
         if(ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
-            playing = 0;
+            playing=0;
+            sair = true;
         }
         else if(ev.type == ALLEGRO_EVENT_TIMER) {
 
@@ -404,9 +406,9 @@ void jogo(){
                 navesec[i].y += navesec[i].dy;
                 desenhaDisparo(navesec[i]);
             }
-
-            if((tempo/1000)%30==0){
-                //dispararAleatorio(&navesec);
+            tempo = al_get_timer_count(timer)/FPS;
+            if(tempo%997==0 && qntdnaves<=52){
+                /*dispararAleatorio(&navesec);*/
                 for(i=0; i<qntdnaves; i++){
                     desenhaDisparo(navesec[i]);
                 }
@@ -421,109 +423,119 @@ void jogo(){
                 detectarColisaoSecundaria(&navesec);
             }
         }
+        tempo = al_get_timer_count(timer)/FPS;
+
         al_flip_display();
+        al_clear_to_color(BKG_COLOR);
+        al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 25, SCREEN_H / 15, ALLEGRO_ALIGN_INTEGER, "%d", tempo);
+
     }
 
         else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
             nave.dx = (ev.mouse.x - nave.x)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
             nave.dy = (ev.mouse.y - nave.y)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
 
-            if((nave.raio>8)){
+            if((nave.raio>8 && qntdnaves<=52)){
                 disparar(&nave, &navesec, ev.mouse.x, ev.mouse.y);
                 for(i=0; i<qntdnaves; i++){
                     desenhaDisparo(navesec[i]);
                 }
             }
         }
-        al_clear_to_color(BKG_COLOR);
     }
 
-    al_clear_to_color(al_map_rgb(0,0,0));
-    tempo = al_get_timer_count(timer)/FPS;
-
-    for(x=0, y=0; x<qntdjogadores; x++){
-        if(Rpont[x]>tempo){
-            y++;
+    if(sair == false){
+        for(x=0, y=0; x<qntdjogadores; x++){
+            if(Rpont[x]>tempo){
+                y++;
+            }
         }
-    }
 
-    if(y<=5){
-        while (!sair){
-            while (!al_is_event_queue_empty(event_queue))
-            {
-                ALLEGRO_EVENT evento;
-                al_wait_for_event(event_queue, &evento);
-
-                if (!concluido)
+        if(y<5){
+            while (!sair){
+                while (!al_is_event_queue_empty(event_queue))
                 {
-                    manipular_entrada(evento);
+                    ALLEGRO_EVENT evento;
+                    al_wait_for_event(event_queue, &evento);
 
-                    if (evento.type == ALLEGRO_EVENT_KEY_DOWN && evento.keyboard.keycode == ALLEGRO_KEY_ENTER)
+                    if (!concluido)
                     {
-                        concluido = true;
+                        manipular_entrada(evento);
+
+                        if (evento.type == ALLEGRO_EVENT_KEY_DOWN && evento.keyboard.keycode == ALLEGRO_KEY_ENTER)
+                        {
+                            concluido = true;
+                        }
+                    }
+
+                    if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+                    {
+                        sair = true;
                     }
                 }
 
-                if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+                al_clear_to_color(al_map_rgb(0,0,0));
+
+                if (!concluido)
                 {
-                    sair = true;
+                    al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
+                                (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
+                                ALLEGRO_ALIGN_CENTRE, "Agora voce faz parte do ranking! Nome:");
+                }
+
+                if(strlen(str)>0){
+                    exibir_texto_centralizado();
+                }
+                al_flip_display();
+            }
+            qntdjogadores++;
+            Rpont[qntdjogadores] = tempo;
+            strcpy(nome[qntdjogadores], str);
+
+            for(i=0; i<=qntdjogadores; i++){
+                for(j=0; j<=qntdjogadores; j++){
+                    if(Rpont[i]>Rpont[j]){
+                        temp = Rpont[i];
+                        Rpont[i] = Rpont[j];
+                        Rpont[j] = temp;
+                        strcpy(nomeaux, nome[i]);
+                        printf("[%s] ", nomeaux);
+                        strcpy(nome[i], nome[j]);
+                        printf("[%s] ", nome[i]);
+                        strcpy(nome[j], nomeaux);
+                        printf("[%s]\n", nome[j]);
+                    }
                 }
             }
 
-            al_clear_to_color(al_map_rgb(0,0,0));
+             printf("%d", qntdjogadores);
+             arq = fopen("ranking.txt", "w");
 
-            if (!concluido)
-            {
-                al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
-                            (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
-                            ALLEGRO_ALIGN_CENTRE, "Agora voce faz parte do ranking! Nome:");
-            }
-            if(strlen(str)>16)
-            exibir_texto_centralizado();
-
-            al_flip_display();
-        }
-
-        qntdjogadores++;
-        Rpont[qntdjogadores] = tempo;
-        printf("%d", Rpont[qntdjogadores]);
-        strcpy(nome[qntdjogadores], str);
-
-        for(i=0; i<qntdjogadores; i++){
-                printf("\n\t%d", Rpont[i]);
-            for(j=0; j<qntdjogadores; j++){
-                if(Rpont[i]>Rpont[j]){
-                    temp = Rpont[i];
-                    Rpont[i] = Rpont[j];
-                    Rpont[j] = temp;
-                    printf("AQUIIII");
-                    strcpy(nomeauxiliar, nome[i]);
-                    strcpy(nome[i], nome[j]);
-                    strcpy(nome[j], nomeauxiliar);
-                    printf("[%s]", nome[i]);
+            if(arq != NULL){
+                for(x=0; x<qntdjogadores; x++){
+                        fprintf(arq, "%s|%d|\n", nome[x], Rpont[x]);
                 }
             }
-        }
-                            printf("[%s]", nome[i]);
-
-
-         arq = fopen("ranking.txt", "w");
-
-        if(arq != NULL){
-            for(x=0; x<qntdjogadores; x++){
-                fprintf(arq, "%s|%d\n", nome[x], Rpont[x]);
+            else{
+                printf("Arquivo inexistente.");
             }
-        }
-        else{
-            printf("Arquivo inexistente.");
-        }
 
-        fclose(arq);
+            fclose(arq);
+
+        }
     }
     else{
-        al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2, (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2, ALLEGRO_ALIGN_CENTRE, "Perdeu :(");
+        al_clear_to_color(al_map_rgb(255,255,255));
+
+        al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /8), ALLEGRO_ALIGN_CENTER, "Ranking");
+
+        for(x=0, y=0; x<qntdjogadores && x<5; x++){
+            al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /3)+y, ALLEGRO_ALIGN_CENTER, "[%s   %d]", nome[x], Rpont[x]);
+            al_flip_display();
+            y+=40;
+        }
+        Sleep(4000);
     }
-    finalizar();
 }
 
 int main() {
