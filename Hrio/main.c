@@ -37,7 +37,6 @@ struct Nave *navesec = NULL;
 volatile long long int tempo=0;
 float evx, evy;
 
-
 int corAleatoria(){
     return rand()%255;
 }
@@ -74,11 +73,12 @@ void dispararAleatorio(Nave **navesec){
 }
 
 void detectarColisaoPrincipal(Nave *nave, Nave **navesec){
-    float areaP, areaS;
+    float areaP, areaS, dist, sRaio;
     areaP = pow((*nave).raio, 2) * 3.1415;
     for(i=0; i<qntdnaves; i++){
-        if( ((*nave).x + (*nave).raio > (*navesec)[i].x && (*nave).x < (*navesec)[i].x + (*navesec)[i].raio)
-           && ((*nave).y < (*navesec)[i].y + (*navesec)[i].raio && (*nave).y > (*navesec)[i].y)) {
+        dist = sqrt(pow((*nave).x - (*navesec)[i].x, 2) + pow((*nave).y - (*navesec)[i].y, 2));
+        sRaio = (*nave).raio + (*navesec)[i].raio;
+        if(dist<sRaio) {
                    areaS = pow((*navesec)[i].raio, 2) * 3.1415;
                    if(areaP>areaS){
                         (*nave).raio = calculaRaio(areaS, areaP);
@@ -92,12 +92,13 @@ void detectarColisaoPrincipal(Nave *nave, Nave **navesec){
 }
 
 void detectarColisaoSecundaria(Nave **navesec){
-    float areaP, areaS;
+    float areaP, areaS, dist, sRaio;
     int aux;
     for(i=0; i<qntdnaves; i++){
         for(j=0; j< qntdnaves; j++){
-            if(((*navesec)[i].x + (*navesec)[i].raio > (*navesec)[j].x && (*navesec)[i].x < (*navesec)[j].x + (*navesec)[j].raio)
-               && ((*navesec)[i].y < (*navesec)[j].y + (*navesec)[j].raio && (*navesec)[i].y > (*navesec)[j].y)){
+            dist = sqrt(pow((*navesec)[i].x - (*navesec)[j].x, 2) + pow((*navesec)[i].y - (*navesec)[j].y, 2));
+            sRaio = (*navesec)[j].raio + (*navesec)[i].raio;
+                if(dist<sRaio) {
 
                     areaP = pow((*navesec)[i].raio, 2) * 3.1415;
                     areaS = pow((*navesec)[j].raio, 2) * 3.1415;
@@ -115,18 +116,19 @@ void detectarColisaoSecundaria(Nave **navesec){
 }
 
 int detectarColisaoInimigo(Nave *nave, Nave *inim){
-float areaP, areaS;
+float areaP, areaS, dist, sRaio;
     areaP = pow((*nave).raio, 2) * 3.1415;
-        if( ((*nave).x + (*nave).raio > (*inim).x && (*nave).x < (*inim).x + (*inim).raio)
-           && ((*nave).y < (*inim).y + (*inim).raio && (*nave).y > (*inim).y)) {
-                   areaS = pow((*inim).raio, 2) * 3.1415;
-                   if(areaS>areaP){
-                        (*inim).raio = calculaRaio(areaP, areaS);
-                        return 1;
-                    }
-                    else{
-                        return 0;
-                    }
+    dist = sqrt(pow((*nave).x - (*inim).x, 2) + pow((*nave).y - (*inim).y, 2));
+    sRaio = (*nave).raio + (*inim).raio;
+        if(dist<sRaio) {
+            areaS = pow((*inim).raio, 2) * 3.1415;
+            if(areaS>areaP){
+                (*inim).raio = calculaRaio(areaP, areaS);
+                return 1;
+            }
+            else{
+                return 0;
+            }
         }
 }
 
@@ -226,7 +228,7 @@ float dist(float x1, float x2, float y1, float y2) {
 }
 
 void disparar(Nave *nave, Nave **navesec, int evx, int evy){
-    int areat, raio;
+    float areat, raio;
     Nave *redim_navess;
 
 	if(*navesec == NULL){
@@ -241,15 +243,15 @@ void disparar(Nave *nave, Nave **navesec, int evx, int evy){
         printf("\nERRO AO ALOCAR MEMORIA.");
     }
 	else{
-            areat = (pow((*nave).raio, 2) * 3.1415) - (pow((*navesec)[qntdnaves].raio, 2) * 3.1415);
-            raio = sqrt((areat/3.1415));
             (*navesec)[qntdnaves].raio = (((*nave).raio)/4);
             (*nave).dx = -((*nave).dx + 0.5);
             (*nave).dy = -((*nave).dy + 0.5);
+            areat =  (pow((*nave).raio, 2) * 3.1415) - (pow((*navesec)[qntdnaves].raio, 2) * 3.1415);
+            raio = sqrt((areat/3.1415));
             (*navesec)[qntdnaves].dx = (evx - (*nave).x)/dist(evx, (*nave).x, evy, (*nave).y);
             (*navesec)[qntdnaves].dy = (evy - (*nave).y)/dist(evx, (*nave).x, evy, (*nave).y);
             (*navesec)[qntdnaves].cor = al_map_rgb(corAleatoria(), corAleatoria(), corAleatoria());
-            (*navesec)[qntdnaves].x = (*nave).x + (*nave).raio;
+            (*navesec)[qntdnaves].x = (*nave).x + (*nave).raio + 10;
             (*navesec)[qntdnaves].y = (*nave).y;
             (*nave).raio = raio;
             qntdnaves++;
@@ -428,10 +430,9 @@ void jogo(){
             }
 
             if(tempo%3==0 && qntdnaves<=52){
-                printf("%d\n", qntdnaves);
-                for(i=0; i<qntdnaves; i++){
-                        desenhaDisparo(navesec[i]);
-                }
+                /*for(i=0; i<qntdnaves; i++){
+                    desenhaDisparo(navesec[i]);
+                }*/
             }
 
             al_flip_display();
