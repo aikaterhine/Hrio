@@ -1,4 +1,5 @@
 #include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_image.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro.h>
@@ -553,10 +554,27 @@ void jogo(){
         Sleep(4000);
 }
 
+void menu(){
+    ALLEGRO_DISPLAY *janela = NULL;
+    ALLEGRO_BITMAP *imagem = NULL;
+
+    al_init();
+    al_init_image_addon();
+    janela = al_create_display(382, 535);
+    imagem = al_load_bitmap("menu.jpg");
+
+    al_draw_bitmap(imagem, 0, 0, 0);
+    al_flip_display();
+    al_rest(10.0);
+    al_destroy_display(janela);
+    al_destroy_bitmap(imagem);
+}
+
 int main() {
 
     srand((unsigned) time(NULL));
 
+    menu();
     if(iniciar() != -1){
         jogo();
     }

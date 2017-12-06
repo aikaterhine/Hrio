@@ -11,8 +11,9 @@
 	<math.h>
 	<time.h>
 
-1512545054 source:d:\hrio\main.c
+1512547606 source:d:\hrio\main.c
 	<allegro5/allegro_primitives.h>
+	<allegro5/allegro_image.h>
 	<allegro5/allegro_font.h>
 	<allegro5/allegro_ttf.h>
 	<allegro5/allegro.h>
