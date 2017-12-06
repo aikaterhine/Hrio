@@ -34,7 +34,7 @@ int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntd
 char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
 bool concluido = false, sair = false;
 struct Nave *navesec = NULL;
-volatile int tempo=0;
+volatile long long int tempo=0;
 float evx, evy;
 
 
@@ -227,32 +227,32 @@ float dist(float x1, float x2, float y1, float y2) {
 
 void disparar(Nave *nave, Nave **navesec, int evx, int evy){
     int areat, raio;
-    Nave *redim_naves;
+    Nave *redim_navess;
 
 	if(*navesec == NULL){
         *navesec = (Nave *)malloc(sizeof(Nave));
 	}
 	else{
-        redim_naves = (Nave *)realloc(*navesec, ((qntdnaves + 1) * sizeof(Nave)));
-        *navesec = redim_naves;
+        redim_navess = (Nave *)realloc(*navesec, ((qntdnaves + 1) * sizeof(Nave)));
+        *navesec = redim_navess;
 	}
 
     if(*navesec == NULL){
         printf("\nERRO AO ALOCAR MEMORIA.");
     }
 	else{
-        areat = (pow((*nave).raio, 2) * 3.1415) - (pow((*navesec)[qntdnaves].raio, 2) * 3.1415);
-        raio = sqrt((areat/3.1415));
-        (*navesec)[qntdnaves].raio = (((*nave).raio)/4);
-        (*nave).dx = -((*nave).dx + 0.5);
-        (*nave).dy = -((*nave).dy + 0.5);
-        (*navesec)[qntdnaves].dx = (evx - (*nave).x)/dist(evx, (*nave).x, evy, (*nave).y);
-        (*navesec)[qntdnaves].dy = (evy - (*nave).y)/dist(evx, (*nave).x, evy, (*nave).y);
-        (*navesec)[qntdnaves].cor = al_map_rgb(corAleatoria(), corAleatoria(), corAleatoria());
-        (*navesec)[qntdnaves].x = (*nave).x + (*nave).raio;
-		(*navesec)[qntdnaves].y = (*nave).y;
-		(*nave).raio = raio;
-        qntdnaves++;
+            areat = (pow((*nave).raio, 2) * 3.1415) - (pow((*navesec)[qntdnaves].raio, 2) * 3.1415);
+            raio = sqrt((areat/3.1415));
+            (*navesec)[qntdnaves].raio = (((*nave).raio)/4);
+            (*nave).dx = -((*nave).dx + 0.5);
+            (*nave).dy = -((*nave).dy + 0.5);
+            (*navesec)[qntdnaves].dx = (evx - (*nave).x)/dist(evx, (*nave).x, evy, (*nave).y);
+            (*navesec)[qntdnaves].dy = (evy - (*nave).y)/dist(evx, (*nave).x, evy, (*nave).y);
+            (*navesec)[qntdnaves].cor = al_map_rgb(corAleatoria(), corAleatoria(), corAleatoria());
+            (*navesec)[qntdnaves].x = (*nave).x + (*nave).raio;
+            (*navesec)[qntdnaves].y = (*nave).y;
+            (*nave).raio = raio;
+            qntdnaves++;
     }
 }
 
@@ -302,12 +302,9 @@ void manipular_entrada(ALLEGRO_EVENT evento){
 }
 
 void exibir_texto_centralizado(){
-    if (strlen(str) > 0)
-    {
-        al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
+        al_draw_text(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 2,
                      (SCREEN_H - al_get_font_ascent(fonte)) / 2,
                      ALLEGRO_ALIGN_CENTRE, str);
-    }
 }
 
 void jogo(){
@@ -369,12 +366,8 @@ void jogo(){
             sair = true;
         }
         else if(ev.type == ALLEGRO_EVENT_TIMER) {
-          tempo++;
+          tempo = al_get_timer_count(timer)/FPS;
 
-          if (tempo==60){
-              min++;
-              tempo=0;
-          }
           if(nave.x > SCREEN_W || nave.x < 0){
               nave.dx = -nave.dx;
           }
@@ -412,16 +405,20 @@ void jogo(){
                     navesec[i].y += navesec[i].dy;
                     desenhaDisparo(navesec[i]);
                 }
-                tempo = al_get_timer_count(timer)/FPS;
-                if(min%2==1 && qntdnaves<=52){
-                    /*dispararAleatorio(&navesec);*/
-                    for(i=0; i<qntdnaves; i++){
-                        desenhaDisparo(navesec[i]);
-                    }
-                }
 
-                if(detectarColisaoInimigo(&nave, &naveinimiga)==1){
+                if(detectarColisaoInimigo(&naveinimiga, &nave)==1){
+                    al_clear_to_color(al_map_rgb(255,255,255));
+                    al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /8), ALLEGRO_ALIGN_CENTER, "Voce venceu!");
+                    al_flip_display();
                     playing = 0;
+                    Sleep(2000);
+                }
+                if(detectarColisaoInimigo(&nave, &naveinimiga)==1){
+                    al_clear_to_color(al_map_rgb(255,255,255));
+                    al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /8), ALLEGRO_ALIGN_CENTER, "Voce perdeu!");
+                    al_flip_display();
+                    playing = 0;
+                    Sleep(2000);
                 }
                 else{
                     detectarColisaoPrincipal(&nave, &navesec);
@@ -429,11 +426,17 @@ void jogo(){
                     detectarColisaoSecundaria(&navesec);
                 }
             }
-            tempo = al_get_timer_count(timer)/FPS;
+
+            if(tempo%3==0 && qntdnaves<=52){
+                printf("%d\n", qntdnaves);
+                for(i=0; i<qntdnaves; i++){
+                        desenhaDisparo(navesec[i]);
+                }
+            }
 
             al_flip_display();
             al_clear_to_color(BKG_COLOR);
-            al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 25, SCREEN_H / 15, ALLEGRO_ALIGN_INTEGER, "%d:%d", min, tempo);
+            al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 25, SCREEN_H / 15, ALLEGRO_ALIGN_INTEGER, "%d", tempo);
         }
 
         else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
@@ -477,6 +480,7 @@ void jogo(){
                         if (evento.type == ALLEGRO_EVENT_KEY_DOWN && evento.keyboard.keycode == ALLEGRO_KEY_ENTER)
                         {
                             concluido = true;
+                            sair = true;
                         }
                     }
 
@@ -486,16 +490,16 @@ void jogo(){
                     }
                 }
 
-                al_clear_to_color(al_map_rgb(0,0,0));
+                al_clear_to_color(al_map_rgb(255,255,255));
 
                 if (!concluido)
                 {
-                    al_draw_text(fonte, al_map_rgb(255, 255, 255), SCREEN_W / 2,
+                    al_draw_text(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 2,
                                 (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
                                 ALLEGRO_ALIGN_CENTRE, "Agora voce faz parte do ranking! Nome:");
                 }
 
-                if(strlen(str)>0){
+                if(strlen(str)<17){
                     exibir_texto_centralizado();
                 }
                 al_flip_display();
@@ -518,7 +522,6 @@ void jogo(){
                 }
             }
 
-             printf("%d", qntdjogadores);
              arq = fopen("ranking.txt", "w");
 
             if(arq != NULL){
