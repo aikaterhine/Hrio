@@ -11,12 +11,11 @@
 	<math.h>
 	<time.h>
 
-1512520274 source:d:\hrio\main.c
+1512530090 source:d:\hrio\main.c
 	<allegro5/allegro_primitives.h>
 	<allegro5/allegro_font.h>
 	<allegro5/allegro_ttf.h>
 	<allegro5/allegro.h>
-	<allegro5/allegro_native_dialog.h>
 	<stdbool.h>
 	<stdlib.h>
 	<string.h>

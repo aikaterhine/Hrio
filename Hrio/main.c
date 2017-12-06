@@ -2,15 +2,14 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro.h>
-#include <allegro5/allegro_native_dialog.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
-#define MAX_TAM 50
 #define MAX_PESSOAS 6
+#define MAX_TAM 50
 
 typedef struct Nave {
 	float x;
@@ -21,21 +20,23 @@ typedef struct Nave {
 	ALLEGRO_COLOR cor;
 } Nave;
 
-const float FPS = 100;
 const int SCREEN_W = 800;
 const int SCREEN_H = 500;
+const float FPS = 100;
 
-ALLEGRO_DISPLAY *display = NULL;
+ALLEGRO_COLOR BKG_COLOR, BKG_COLOR_MSSG;
 ALLEGRO_EVENT_QUEUE *event_queue = NULL;
+ALLEGRO_DISPLAY *display = NULL;
 ALLEGRO_TIMER *timer = NULL;
 ALLEGRO_FONT *fonte = NULL;
-ALLEGRO_COLOR BKG_COLOR, BKG_COLOR_MSSG;
 
-struct Nave *navesec = NULL;
 int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0, min=0;
-volatile int tempo=0;
-bool concluido = false, sair = false;
 char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
+bool concluido = false, sair = false;
+struct Nave *navesec = NULL;
+volatile int tempo=0;
+float evx, evy;
+
 
 int corAleatoria(){
     return rand()%255;
@@ -212,8 +213,8 @@ void desenhaNave(Nave n) {
 }
 
 void criaInimigo(Nave *b, int r){
-	(*b).y = rand()%100;
-	(*b).x = rand()%100;
+	(*b).y = 10 + rand() % (SCREEN_H - 20);
+	(*b).x = 10 + rand() % (SCREEN_W - 20);
 	(*b).cor = al_map_rgb(218,112,214);
 	(*b).raio = r;
 	(*b).dx = 1;
@@ -355,8 +356,6 @@ void jogo(){
 
     fclose(arq);
 
-    srand((unsigned) time(NULL));
-
     while(playing !=0){
 
         ALLEGRO_EVENT ev;
@@ -366,21 +365,26 @@ void jogo(){
         al_wait_for_event(event_queue, &ev);
 
         if(ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
-            playing=0;
+            playing = 0;
             sair = true;
         }
         else if(ev.type == ALLEGRO_EVENT_TIMER) {
-            if (tempo==60){
-                min++;
-                tempo=0;
-            }
+          tempo++;
 
-          if(nave.x > SCREEN_W || nave.x < 0 || naveinimiga.x > SCREEN_W || naveinimiga.x < 0){
+          if (tempo==60){
+              min++;
+              tempo=0;
+          }
+          if(nave.x > SCREEN_W || nave.x < 0){
               nave.dx = -nave.dx;
+          }
+          if(naveinimiga.x > SCREEN_W || naveinimiga.x < 0){
               naveinimiga.dx = -naveinimiga.dx;
           }
-          if(nave.y > SCREEN_H || nave.y < 0 || naveinimiga.y > SCREEN_H || naveinimiga.y < 0){
-              nave.dy = - nave.dy;
+          if(nave.y > SCREEN_H || nave.y < 0){
+              nave.dy = -nave.dy;
+          }
+          if(naveinimiga.y > SCREEN_H || naveinimiga.y < 0){
               naveinimiga.dy = -naveinimiga.dy;
           }
 
@@ -394,54 +398,57 @@ void jogo(){
 
            desenhaNave(naveinimiga);
 
-        if(navesec!=NULL){
-            for(i=0; i<qntdnaves; i++){
-
-                if(navesec[i].x > SCREEN_W || navesec[i].x < 0){
-                    navesec[i].dx = -navesec[i].dx;
-                }
-
-                if(navesec[i].y > SCREEN_H || navesec[i].y < 0){
-                    navesec[i].dy = -navesec[i].dy;
-                }
-
-                navesec[i].x += navesec[i].dx;
-                navesec[i].y += navesec[i].dy;
-                desenhaDisparo(navesec[i]);
-            }
-            tempo = al_get_timer_count(timer)/FPS;
-            if(min%2==1 && qntdnaves<=52){
-                /*dispararAleatorio(&navesec);*/
+           if(navesec!=NULL){
                 for(i=0; i<qntdnaves; i++){
+                    if(navesec[i].x > SCREEN_W || navesec[i].x < 0){
+                        navesec[i].dx = -navesec[i].dx;
+                    }
+
+                    if(navesec[i].y > SCREEN_H || navesec[i].y < 0){
+                        navesec[i].dy = -navesec[i].dy;
+                    }
+
+                    navesec[i].x += navesec[i].dx;
+                    navesec[i].y += navesec[i].dy;
                     desenhaDisparo(navesec[i]);
                 }
-            }
+                tempo = al_get_timer_count(timer)/FPS;
+                if(min%2==1 && qntdnaves<=52){
+                    /*dispararAleatorio(&navesec);*/
+                    for(i=0; i<qntdnaves; i++){
+                        desenhaDisparo(navesec[i]);
+                    }
+                }
 
-            if(detectarColisaoInimigo(&nave, &naveinimiga)==1){
-                playing = 0;
+                if(detectarColisaoInimigo(&nave, &naveinimiga)==1){
+                    playing = 0;
+                }
+                else{
+                    detectarColisaoPrincipal(&nave, &navesec);
+                    detectarColisaoPrincipal(&naveinimiga, &navesec);
+                    detectarColisaoSecundaria(&navesec);
+                }
             }
-            else{
-                detectarColisaoPrincipal(&nave, &navesec);
-                detectarColisaoPrincipal(&naveinimiga, &navesec);
-                detectarColisaoSecundaria(&navesec);
-            }
+            tempo = al_get_timer_count(timer)/FPS;
+
+            al_flip_display();
+            al_clear_to_color(BKG_COLOR);
+            al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 25, SCREEN_H / 15, ALLEGRO_ALIGN_INTEGER, "%d:%d", min, tempo);
         }
-        tempo = al_get_timer_count(timer)/FPS;
-
-        al_flip_display();
-        al_clear_to_color(BKG_COLOR);
-        al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 25, SCREEN_H / 15, ALLEGRO_ALIGN_INTEGER, "%d:%d", min, tempo);
-
-    }
 
         else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
-                            tempo++;
 
             nave.dx = (ev.mouse.x - nave.x)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
             nave.dy = (ev.mouse.y - nave.y)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
 
+            evx = 10 + rand() % (SCREEN_W - 20);
+            evy = 10 + rand() % (SCREEN_H - 20);
+
+            naveinimiga.dx = (evx - naveinimiga.x)/dist(evx, naveinimiga.x, evy, naveinimiga.y);
+            naveinimiga.dy = (evy - naveinimiga.y)/dist(evy, naveinimiga.x, evy, naveinimiga.y);
+
             if((nave.raio>8 && qntdnaves<=52)){
-                disparar(&nave, &navesec, ev.mouse.x, ev.mouse.y);
+                disparar(&nave, &navesec, evx, evy);
                 for(i=0; i<qntdnaves; i++){
                     desenhaDisparo(navesec[i]);
                 }
@@ -516,7 +523,9 @@ void jogo(){
 
             if(arq != NULL){
                 for(x=0; x<qntdjogadores; x++){
-                        fprintf(arq, "%s|%d|\n", nome[x], Rpont[x]);
+                        if(strlen(nome[x])>0 && Rpont[x]>0){
+                                fprintf(arq, "%s|%d|\n", nome[x], Rpont[x]);
+                        }
                 }
             }
             else{
@@ -525,21 +534,24 @@ void jogo(){
             fclose(arq);
         }
     }
-    else{
+
         al_clear_to_color(al_map_rgb(255,255,255));
 
         al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /8), ALLEGRO_ALIGN_CENTER, "Ranking");
 
         for(x=0, y=0; x<qntdjogadores && x<5; x++){
-            al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /3)+y, ALLEGRO_ALIGN_CENTER, "[%s   %d]", nome[x], Rpont[x]);
+            if(strlen(nome[x])>0 && Rpont[x]>0){
+                al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /3)+y, ALLEGRO_ALIGN_CENTER, "[%s   %d]", nome[x], Rpont[x]);
+                y+=40;
+            }
             al_flip_display();
-            y+=40;
         }
         Sleep(4000);
-    }
 }
 
 int main() {
+
+    srand((unsigned) time(NULL));
 
     if(iniciar() != -1){
         jogo();
