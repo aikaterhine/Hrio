@@ -31,12 +31,12 @@ ALLEGRO_DISPLAY *display = NULL;
 ALLEGRO_TIMER *timer = NULL;
 ALLEGRO_FONT *fonte = NULL;
 
-int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0, min=0;
+int i, j, xini, yini, x, y, temp,qntdnaves=0, playing=1,Rpont[MAX_PESSOAS], qntdjogadores=0, menorTempo=0;
 char nome[MAX_PESSOAS][17], *nomeaux, buf[MAX_TAM], str[17];
 bool concluido = false, sair = false;
 struct Nave *navesec = NULL;
 volatile long long int tempo=0;
-float evx, evy;
+float evx, evy, dx=0.0, dy=0.0;
 
 int corAleatoria(){
     return rand()%255;
@@ -73,7 +73,7 @@ void dispararAleatorio(Nave **navesec){
     }
 }
 
-void detectarColisaoPrincipal(Nave *nave, Nave **navesec){
+int detectarColisaoPrincipal(Nave *nave, Nave **navesec){
     float areaP, areaS, dist, sRaio;
     areaP = pow((*nave).raio, 2) * 3.1415;
     for(i=0; i<qntdnaves; i++){
@@ -86,7 +86,13 @@ void detectarColisaoPrincipal(Nave *nave, Nave **navesec){
                         for(j=i; j<qntdnaves; j++){
                             (*navesec)[j] = (*navesec)[j+1];
                         }
+                        dx-=2.0;
+                        dy-=2.0;
                         qntdnaves--;
+                        return 1;
+                    }
+                    if(areaS>areaP){
+                        return 0;
                     }
         }
     }
@@ -228,7 +234,7 @@ float dist(float x1, float x2, float y1, float y2) {
 	return sqrt(pow(x1-x2,2) + pow(y1-y2,2));
 }
 
-void disparar(Nave *nave, Nave **navesec, int evx, int evy){
+void disparar(Nave *nave, Nave **navesec, int evx, int evy, int id){
     float areat, raio;
     Nave *redim_navess;
 
@@ -244,18 +250,29 @@ void disparar(Nave *nave, Nave **navesec, int evx, int evy){
         printf("\nERRO AO ALOCAR MEMORIA.");
     }
 	else{
+        if(id == 0){
             (*navesec)[qntdnaves].raio = (((*nave).raio)/4);
-            (*nave).dx = -((*nave).dx + 0.5);
-            (*nave).dy = -((*nave).dy + 0.5);
             areat =  (pow((*nave).raio, 2) * 3.1415) - (pow((*navesec)[qntdnaves].raio, 2) * 3.1415);
             raio = sqrt((areat/3.1415));
             (*navesec)[qntdnaves].dx = (evx - (*nave).x)/dist(evx, (*nave).x, evy, (*nave).y);
             (*navesec)[qntdnaves].dy = (evy - (*nave).y)/dist(evx, (*nave).x, evy, (*nave).y);
             (*navesec)[qntdnaves].cor = al_map_rgb(corAleatoria(), corAleatoria(), corAleatoria());
-            (*navesec)[qntdnaves].x = (*nave).x + (*nave).raio + 10;
-            (*navesec)[qntdnaves].y = (*nave).y;
+            (*navesec)[qntdnaves].x = evx;
+            (*navesec)[qntdnaves].y = evy;
             (*nave).raio = raio;
+            dx+=0.3;
+            dy+=0.3;
             qntdnaves++;
+        }
+        if(id == 1){
+            (*navesec)[qntdnaves].raio = 5 + rand()%15;
+            (*navesec)[qntdnaves].dx = (evx - (*nave).x)/dist(evx, (*nave).x, evy, (*nave).y);
+            (*navesec)[qntdnaves].dy = (evy - (*nave).y)/dist(evx, (*nave).x, evy, (*nave).y);
+            (*navesec)[qntdnaves].cor = al_map_rgb(corAleatoria(), corAleatoria(), corAleatoria());
+            (*navesec)[qntdnaves].x = evx;
+            (*navesec)[qntdnaves].y = evy;
+            qntdnaves++;
+        }
     }
 }
 
@@ -337,9 +354,9 @@ void jogo(){
             x++;
         }
 
-        for(i=0; i<qntdjogadores; i++){
-            for(j=0; j<qntdjogadores; j++){
-                if(Rpont[i]>Rpont[j]){
+        for(i=0; i<=qntdjogadores; i++){
+            for(j=0; j<=qntdjogadores; j++){
+                if(Rpont[i]<Rpont[j]){
                     temp = Rpont[i];
                     Rpont[i] = Rpont[j];
                     Rpont[j] = temp;
@@ -355,6 +372,7 @@ void jogo(){
     }
 
     fclose(arq);
+    menorTempo = Rpont[0];
 
     while(playing !=0){
 
@@ -416,11 +434,14 @@ void jogo(){
                     playing = 0;
                     Sleep(2000);
                 }
-                if(detectarColisaoInimigo(&nave, &naveinimiga)==1){
+                if(detectarColisaoInimigo(&nave, &naveinimiga)==1 || detectarColisaoPrincipal(&nave, &navesec)==0){
                     al_clear_to_color(al_map_rgb(255,255,255));
                     al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /8), ALLEGRO_ALIGN_CENTER, "Voce perdeu!");
+                    al_draw_textf(fonte, al_map_rgb(0, 0, 0), (SCREEN_W / 2), (SCREEN_H /8)+40, ALLEGRO_ALIGN_CENTER,
+                    "Fez %d pontos!", tempo);
                     al_flip_display();
                     playing = 0;
+                    sair = true;
                     Sleep(2000);
                 }
                 else{
@@ -430,10 +451,10 @@ void jogo(){
                 }
             }
 
-            if(tempo%3==0 && qntdnaves<=52){
-                /*for(i=0; i<qntdnaves; i++){
-                    desenhaDisparo(navesec[i]);
-                }*/
+            if(al_get_timer_count(timer)%500==0 && qntdnaves<=52){
+                evx = 10 + rand() % (SCREEN_W - 20);
+                evy = 10 + rand() % (SCREEN_H - 20);
+                disparar(&nave, &navesec, evx, evy, 1);
             }
 
             al_flip_display();
@@ -443,8 +464,8 @@ void jogo(){
 
         else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
 
-            nave.dx = (ev.mouse.x - nave.x)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
-            nave.dy = (ev.mouse.y - nave.y)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y);
+            nave.dx = -((ev.mouse.x - nave.x)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y) + dx);
+            nave.dy = -((ev.mouse.y - nave.y)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y) + dy);
 
             evx = 10 + rand() % (SCREEN_W - 20);
             evy = 10 + rand() % (SCREEN_H - 20);
@@ -453,7 +474,9 @@ void jogo(){
             naveinimiga.dy = (evy - naveinimiga.y)/dist(evy, naveinimiga.x, evy, naveinimiga.y);
 
             if((nave.raio>8 && qntdnaves<=52)){
-                disparar(&nave, &navesec, evx, evy);
+
+                disparar(&nave, &navesec, ev.mouse.x, ev.mouse.y, 0);
+
                 for(i=0; i<qntdnaves; i++){
                     desenhaDisparo(navesec[i]);
                 }
@@ -463,7 +486,7 @@ void jogo(){
 
     if(sair == false){
         for(x=0, y=0; x<qntdjogadores; x++){
-            if(Rpont[x]>tempo){
+            if(Rpont[x]<tempo){
                 y++;
             }
         }
@@ -496,9 +519,9 @@ void jogo(){
 
                 if (!concluido)
                 {
-                    al_draw_text(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 2,
+                    al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 2,
                                 (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
-                                ALLEGRO_ALIGN_CENTRE, "Agora voce faz parte do ranking! Nome:");
+                                ALLEGRO_ALIGN_CENTRE, "Agora voce faz parte do ranking com %d pontos! Nome:", tempo);
                 }
 
                 if(strlen(str)<17){
@@ -512,17 +535,18 @@ void jogo(){
 
             for(i=0; i<=qntdjogadores; i++){
                 for(j=0; j<=qntdjogadores; j++){
-                    if(Rpont[i]>Rpont[j]){
+                    if(Rpont[i]<Rpont[j]){
                         temp = Rpont[i];
                         Rpont[i] = Rpont[j];
                         Rpont[j] = temp;
                         strcpy(nomeaux, nome[i]);
                         strcpy(nome[i], nome[j]);
                         strcpy(nome[j], nomeaux);
-                        printf("[%s]\n", nome[j]);
                     }
                 }
             }
+
+             menorTempo = Rpont[0];
 
              arq = fopen("ranking.txt", "w");
 
@@ -537,6 +561,15 @@ void jogo(){
                 printf("Arquivo inexistente.");
             }
             fclose(arq);
+        }
+
+        else{
+            al_clear_to_color(al_map_rgb(255,255,255));
+
+            al_draw_textf(fonte, al_map_rgb(0, 0, 0), SCREEN_W / 2,
+                                (SCREEN_H / 2 - al_get_font_ascent(fonte)) / 2,
+                                ALLEGRO_ALIGN_CENTRE, "Que pena! Voce fez %d pontos e nao alcancou o lider do ranking com %d pontos!", tempo, menorTempo);
+            al_flip_display();
         }
     }
 
@@ -554,32 +587,80 @@ void jogo(){
         Sleep(4000);
 }
 
-void menu(){
+int menu(){
     ALLEGRO_DISPLAY *janela = NULL;
     ALLEGRO_BITMAP *imagem = NULL;
+    ALLEGRO_EVENT_QUEUE *fila = NULL;
+    ALLEGRO_TIMER *temp = NULL;
+    ALLEGRO_FONT *font = NULL, *font2 = NULL;
+    int acao = 0, tempo;
 
     al_init();
+    al_init_font_addon();
+    al_init_ttf_addon();
+    al_install_mouse();
+    al_install_keyboard();
+	al_init_primitives_addon();
+
+    temp = al_create_timer(1.0 / FPS);
+    fila = al_create_event_queue();
+    font = al_load_ttf_font("comic.ttf", 75, 0);
+    font2 = al_load_ttf_font("comic.ttf", 28, 0);
+
+	al_register_event_source(fila, al_get_mouse_event_source());
+    al_register_event_source(fila, al_get_keyboard_event_source());
+    al_register_event_source(fila, al_get_timer_event_source(temp));
+
     al_init_image_addon();
-    janela = al_create_display(382, 535);
+    janela = al_create_display(400, 600);
     imagem = al_load_bitmap("menu.jpg");
 
     al_draw_bitmap(imagem, 0, 0, 0);
+    al_draw_textf(font, al_map_rgb(255, 255, 255), 280, 180, ALLEGRO_ALIGN_CENTER, "Hrio");
+    al_draw_textf(font2, al_map_rgb(255, 255, 255), 250, 400, ALLEGRO_ALIGN_CENTER, "Clique para iniciar.");
+    al_draw_textf(font2, al_map_rgb(255, 255, 255), 250, 430, ALLEGRO_ALIGN_CENTER, "Pressione Esc para sair.");
+
     al_flip_display();
-    al_rest(10.0);
-    al_destroy_display(janela);
-    al_destroy_bitmap(imagem);
+
+    while(acao!=1){
+        ALLEGRO_EVENT evento;
+        al_start_timer(temp);
+        al_wait_for_event(fila, &evento);
+
+        if(evento.keyboard.keycode == ALLEGRO_KEY_ESCAPE){
+            acao = 1;
+            al_destroy_display(janela);
+            al_destroy_bitmap(imagem);
+            al_destroy_timer(temp);
+            al_destroy_event_queue(fila);
+            return 2;
+        }
+        else if(evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+            acao = 1;
+            al_destroy_display(janela);
+            al_destroy_bitmap(imagem);
+            al_destroy_timer(temp);
+            al_destroy_event_queue(fila);
+            return acao;
+        }
+    }
 }
 
 int main() {
 
     srand((unsigned) time(NULL));
 
-    menu();
-    if(iniciar() != -1){
-        jogo();
+    if(menu()== 1){
+        if(iniciar() != -1){
+            jogo();
+        }
+        else{
+            puts("Erro de Inicializacao.");
+        }
     }
     else{
         puts("Erro de Inicializacao.");
     }
-        return 0;
+
+return 0;
 }
