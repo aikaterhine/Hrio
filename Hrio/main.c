@@ -1,4 +1,6 @@
 #include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_acodec.h>
+#include <allegro5/allegro_audio.h>
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
@@ -86,8 +88,8 @@ int detectarColisaoPrincipal(Nave *nave, Nave **navesec){
                         for(j=i; j<qntdnaves; j++){
                             (*navesec)[j] = (*navesec)[j+1];
                         }
-                        dx-=2.0;
-                        dy-=2.0;
+                        (*nave).dx-=0.9;
+                        (*nave).dy-=0.9;
                         qntdnaves--;
                         return 1;
                     }
@@ -185,10 +187,11 @@ int iniciar(){
 	}
 
     fonte = al_load_ttf_font("comic.ttf", 42, 0);
+
     if (!fonte)
     {
         fprintf(stderr, "Falha ao carregar \"comic.ttf\".\n");
-        return false;
+        return -1;
     }
 
    	/*registra na fila de eventos que eu quero identificar quando a tela foi alterada */
@@ -257,11 +260,9 @@ void disparar(Nave *nave, Nave **navesec, int evx, int evy, int id){
             (*navesec)[qntdnaves].dx = (evx - (*nave).x)/dist(evx, (*nave).x, evy, (*nave).y);
             (*navesec)[qntdnaves].dy = (evy - (*nave).y)/dist(evx, (*nave).x, evy, (*nave).y);
             (*navesec)[qntdnaves].cor = al_map_rgb(corAleatoria(), corAleatoria(), corAleatoria());
-            (*navesec)[qntdnaves].x = evx;
-            (*navesec)[qntdnaves].y = evy;
+            (*navesec)[qntdnaves].x = (*nave).x + (*nave).raio + 7;
+            (*navesec)[qntdnaves].y = (*nave).y + (*nave).raio;
             (*nave).raio = raio;
-            dx+=0.3;
-            dy+=0.3;
             qntdnaves++;
         }
         if(id == 1){
@@ -375,7 +376,6 @@ void jogo(){
     menorTempo = Rpont[0];
 
     while(playing !=0){
-
         ALLEGRO_EVENT ev;
         /*inicia o temporizador*/
         al_start_timer(timer);
@@ -464,8 +464,8 @@ void jogo(){
 
         else if(ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
 
-            nave.dx = -((ev.mouse.x - nave.x)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y) + dx);
-            nave.dy = -((ev.mouse.y - nave.y)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y) + dy);
+            nave.dx = -((ev.mouse.x - nave.x)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y));
+            nave.dy = -((ev.mouse.y - nave.y)/dist(ev.mouse.x, nave.x, ev.mouse.y, nave.y));
 
             evx = 10 + rand() % (SCREEN_W - 20);
             evy = 10 + rand() % (SCREEN_H - 20);
@@ -474,6 +474,9 @@ void jogo(){
             naveinimiga.dy = (evy - naveinimiga.y)/dist(evy, naveinimiga.x, evy, naveinimiga.y);
 
             if((nave.raio>8 && qntdnaves<=52)){
+
+                nave.dx+=1.0;
+                nave.dy+=1.0;
 
                 disparar(&nave, &navesec, ev.mouse.x, ev.mouse.y, 0);
 
@@ -485,13 +488,13 @@ void jogo(){
     }
 
     if(sair == false){
-        for(x=0, y=0; x<qntdjogadores; x++){
-            if(Rpont[x]<tempo){
-                y++;
+        for(x=0, y=5; x<qntdjogadores; x++){
+            if(tempo<Rpont[x]){
+                y--;
             }
         }
 
-        if(y<5){
+        if(y<=5){
             while (!sair){
                 while (!al_is_event_queue_empty(event_queue))
                 {
@@ -607,6 +610,8 @@ int menu(){
     font = al_load_ttf_font("comic.ttf", 75, 0);
     font2 = al_load_ttf_font("comic.ttf", 28, 0);
 
+    al_set_window_title(janela, "Hrio");
+
 	al_register_event_source(fila, al_get_mouse_event_source());
     al_register_event_source(fila, al_get_keyboard_event_source());
     al_register_event_source(fila, al_get_timer_event_source(temp));
@@ -650,16 +655,13 @@ int main() {
 
     srand((unsigned) time(NULL));
 
-    if(menu()== 1){
+    if(menu()==1){
         if(iniciar() != -1){
             jogo();
         }
         else{
             puts("Erro de Inicializacao.");
         }
-    }
-    else{
-        puts("Erro de Inicializacao.");
     }
 
 return 0;
